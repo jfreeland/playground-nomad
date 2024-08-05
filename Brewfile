@@ -1,0 +1,2 @@
+brew 'ansible'
+cask 'multipass'

@@ -1,0 +1,153 @@
+---
+- name: install and configure nomad
+  hosts: all
+  become: yes
+  tasks:
+    - name: install prerequisite system packages
+      apt:
+        name:
+          - curl
+          - unzip
+          - apt-transport-https
+          - software-properties-common
+          - docker.io
+        state: present
+        update_cache: yes
+
+    - name: add ubuntu to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Add HashiCorp GPG key
+      apt_key:
+        url: https://apt.releases.hashicorp.com/gpg
+        state: present
+
+    - name: add HashiCorp apt repository for amd64
+      apt_repository:
+        repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+      when: ansible_architecture == "x86_64"
+
+    - name: add HashiCorp APT repository for arm64
+      apt_repository:
+        repo: "deb [arch=arm64] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+      when: ansible_architecture == "aarch64"
+
+    - name: install nomad
+      apt:
+        name: nomad
+        state: present
+        update_cache: yes
+
+    - name: install consul
+      apt:
+        name: consul
+        state: present
+        update_cache: yes
+
+    - name: install pip3
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: install python-nomad library
+      pip:
+        name: python-nomad
+
+    - name: create config dir
+      file:
+        path: /etc/nomad.d
+        state: directory
+        mode: "0755"
+
+    - name: create consul config
+      copy:
+        content: "{{ lookup('ansible.builtin.file', './consul.hcl') }}"
+        dest: /etc/consul.d/consul.hcl
+        mode: "0644"
+
+    - name: create nomad config
+      copy:
+        content: "{{ lookup('ansible.builtin.file', './nomad.hcl') }}"
+        dest: /etc/nomad.d/nomad.hcl
+        mode: "0644"
+
+    - name: start consul in dev mode
+      copy:
+        dest: /etc/systemd/system/consul.service
+        content: |
+          [Unit]
+          Description=Consul
+          Documentation=https://developer.hashicorp.com/consul/docs
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          ExecStart=/usr/bin/consul agent -dev -config-file /etc/consul.d/consul.hcl
+          ExecReload=/bin/kill -HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGINT
+          Restart=on-failure
+          LimitNOFILE=65536
+          TasksMax=infinity
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - reload systemd
+        - restart consul
+
+    # TODO: I could start a separate agent and server but that's really
+    # overkill for this exercise.
+    - name: start nomad in dev mode
+      copy:
+        dest: /etc/systemd/system/nomad.service
+        content: |
+          [Unit]
+          Description=Nomad
+          Documentation=https://www.nomadproject.io/docs/
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          ExecStart=/usr/bin/nomad agent -dev -config /etc/nomad.d -bind 0.0.0.0 -consul-address=http://127.0.0.1:8500
+          ExecReload=/bin/kill -HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGINT
+          Restart=on-failure
+          LimitNOFILE=65536
+          TasksMax=infinity
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - reload systemd
+        - restart nomad
+
+    - name: enable consul
+      systemd:
+        name: consul
+        enabled: yes
+        state: started
+
+    - name: enable nomad
+      systemd:
+        name: nomad
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: reload systemd
+      command: systemctl daemon-reload
+
+    - name: restart nomad
+      systemd:
+        name: nomad
+        state: restarted
+
+    - name: restart consul
+      systemd:
+        name: consul
+        state: restarted

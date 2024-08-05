@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: nomad
+    consul_sd_configs:
+      - server: "http://{{ host_ip }}:8500"
+    relabel_configs:
+      - source_labels: [__meta_consul_service]
+        target_label: service
+
+      - action: labeldrop
+        regex: '__meta_consul_(.*)'

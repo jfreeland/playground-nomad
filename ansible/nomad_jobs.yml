@@ -1,0 +1,60 @@
+---
+- name: Install and configure Nomad
+  hosts: all
+  become: yes
+  tasks:
+    - name: install pip3
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: install python-nomad
+      pip:
+        name: python-nomad
+        state: present
+
+    - name: generate prometheus config
+      local_action: template
+      args:
+        src: "{{ playbook_dir }}/../nomad-jobs/prometheus/prometheus.yml.j2"
+        dest: "{{ playbook_dir }}/../nomad-jobs/prometheus/prometheus.yml"
+      vars:
+        host_ip: "{{ ansible_default_ipv4.address }}"
+      become: no
+
+    - name: generate grafana datasource
+      local_action: template
+      args:
+        src: "{{ playbook_dir }}/../nomad-jobs/grafana/provisioning/datasources/provisioner.yml.j2"
+        dest: "{{ playbook_dir }}/../nomad-jobs/grafana/provisioning/datasources/provisioner.yml"
+      vars:
+        host_ip: "{{ ansible_default_ipv4.address }}"
+      become: no
+
+    - name: registry
+      community.general.nomad_job:
+        host: localhost
+        state: present
+        use_ssl: false
+        content: "{{ lookup('ansible.builtin.file', '../nomad-jobs/registry.hcl') }}"
+
+    - name: prometheus
+      community.general.nomad_job:
+        host: localhost
+        state: present
+        use_ssl: false
+        content: "{{ lookup('ansible.builtin.file', '../nomad-jobs/prometheus.hcl') }}"
+
+    - name: grafana
+      community.general.nomad_job:
+        host: localhost
+        state: present
+        use_ssl: false
+        content: "{{ lookup('ansible.builtin.file', '../nomad-jobs/grafana.hcl') }}"
+
+    - name: helloworld
+      community.general.nomad_job:
+        host: localhost
+        state: present
+        use_ssl: false
+        content: "{{ lookup('ansible.builtin.file', '../nomad-jobs/helloworld.hcl') }}"

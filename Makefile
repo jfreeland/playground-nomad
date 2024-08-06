@@ -7,10 +7,6 @@ reqs:
 	@ansible-galaxy role install -r ansible/requirements.yml
 	@ansible-galaxy collection install -r ansible/requirements.yml
 
-.PHONY: ip
-ip:
-	@multipass info $(VM_NAME) --format json | jq -r '.info.nomad.ipv4[0]'
-
 .PHONY: ssh
 ssh:
 	@multipass shell nomad

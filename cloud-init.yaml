@@ -1,6 +1,0 @@
-#cloud-config
-users:
-  - default
-  - name: ubuntu
-    ssh_authorized_keys:
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDhxogaCenlkFE0Sgx+7DO7G8OUcyDNXJtc1QsrysIAzW0Hyhar5W22wCRctqq8tS3pjhuebY8SjWxvO82ZV4LqFuaLDsISWe0rUmh0tC1erZvKdit0Azktf75gdsr/SG6pW6e/SqYhP6G2x9cAhL5LVUBb2WFsMC7oYCk+okX14XpkTgeNQX7zfhObPah/gH/SGG12tIgOt7VQzv/xkVmivpU2lBOnkZ2N7mn/VLjEHV+DWMbcj5pxapvGa/b4PU2nYki06CqTIqjUa0Ar3dWbXmF2kEaVqveXmr61/gfV9Xkm5PSWgpLMpBPrUCaiRhCTXs8vOmM7GN6ueBzv4slT
